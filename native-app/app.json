@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Pitfall",
+    "slug": "pitfall",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "pitfall",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tatasun.pitfall"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#e60023"
+      },
+      "package": "com.tatasun.pitfall"
+    },
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fffaf2"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}

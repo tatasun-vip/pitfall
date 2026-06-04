@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1242" height="2436" viewBox="0 0 1242 2436">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf2"/>
+      <stop offset="0.48" stop-color="#fff6ea"/>
+      <stop offset="1" stop-color="#ead9c6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1242" height="2436" fill="url(#bg)"/>
+  <circle cx="232" cy="310" r="164" fill="#ffd45c" opacity="0.45"/>
+  <circle cx="1052" cy="2058" r="360" fill="#e60023" opacity="0.12"/>
+  <g transform="translate(371 680)">
+    <rect width="500" height="500" rx="128" fill="#e60023"/>
+    <path d="M250 82 L364 138 V230 C364 304 316 352 250 382 C184 352 136 304 136 230 V138 Z" fill="none" stroke="#fffaf2" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M250 166 V276" stroke="#fffaf2" stroke-width="34" stroke-linecap="round"/>
+    <circle cx="250" cy="332" r="20" fill="#fffaf2"/>
+  </g>
+  <text x="621" y="1338" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,PingFang SC,Arial,sans-serif" font-size="86" font-weight="900" fill="#20171d">Pitfall</text>
+  <text x="621" y="1414" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,PingFang SC,Arial,sans-serif" font-size="34" font-weight="800" letter-spacing="7" fill="#70675f">小众点评网</text>
+  <text x="621" y="1510" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,PingFang SC,Arial,sans-serif" font-size="31" font-weight="700" fill="#b80f26">真实经验，刷出路</text>
+</svg>

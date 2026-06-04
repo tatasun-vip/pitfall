@@ -1,0 +1,29 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/pc",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/m",
+      "destination": "/worlds-mobile.html"
+    },
+    {
+      "source": "/mobile",
+      "destination": "/worlds-mobile.html"
+    }
+  ]
+}
