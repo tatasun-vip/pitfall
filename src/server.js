@@ -1,12 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import 'dotenv/config';
 import fastifyStatic from '@fastify/static';
-import { createDatabase } from './db.js';
+import { closeDatabase, createDatabase } from './db.js';
 import { buildApp } from './app.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const db = createDatabase(path.join(root, 'data', 'pitfall.sqlite'));
+const db = await createDatabase();
 const app = buildApp({ db });
 
 app.get('/', async (request, reply) => reply.sendFile('app.html'));
@@ -15,6 +16,10 @@ await app.register(fastifyStatic, {
   root,
   prefix: '/',
   decorateReply: true
+});
+
+app.addHook('onClose', async () => {
+  await closeDatabase(db);
 });
 
 const port = Number(process.env.PORT || 8791);

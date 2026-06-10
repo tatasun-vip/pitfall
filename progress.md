@@ -137,3 +137,73 @@
 - 《我在罗马当天团宠》新增第44章，已写入上传分享文件夹。
 - 两本 `上传章节索引.md` 已刷新。
 - 验证结果：重回涨停时 1-42 无缺章；我在罗马当天团宠 1-44 无缺章。
+
+
+### 2026-06-10 Phase 9 开始
+- 用户提供 Supabase Postgres 主机、端口、库名、用户名和密码，要求把 Pitfall 数据库改为 Supabase。
+- 安全决策：数据库密码仅写入本地 `.env`，`.gitignore` 必须忽略 `.env`，不把明文凭据提交到仓库。
+- 技术方向：从 `better-sqlite3` 同步 API 迁移到 `pg` 异步连接池，保留现有 HTTP API 行为。
+
+
+### 2026-06-10 Phase 9 迁移结果
+- `src/db.js` 从 `better-sqlite3` 迁移到 `pg`，schema 使用 Postgres `BIGSERIAL`、`TIMESTAMPTZ`、`ON CONFLICT DO NOTHING`、`ILIKE`。
+- `src/app.js` 全部数据库调用改为 async/await，并把唯一键冲突处理改为 Postgres `23505`。
+- `src/server.js` 加载 `dotenv/config`，使用 Supabase/Postgres 环境变量创建连接池，并在关闭时释放连接。
+- `tests/api.test.js` 改为临时 Postgres schema 隔离测试数据；测试不自动 seed，避免影响断言和远端数据。
+- `.env` 已写入本机真实 Supabase 参数，`.env.example` 提供占位模板，`.gitignore` 已忽略 `.env`。
+- 验证：`node --check src/db.js src/app.js src/server.js tests/api.test.js` 通过。
+- 阻塞：`npm test` 连接阶段失败，错误为 `getaddrinfo ENOTFOUND db.xgrmcwcgkbektyxrhbhu.supabase.co`；`dig @8.8.8.8` 与 `dig @1.1.1.1` 均无解析结果。
+
+
+### 2026-06-10 Phase 9 DATABASE_URL 重试
+- 用户提供完整连接串 `postgresql://postgres:***@db.xgrmcwcgkbektyxrhbhu.supabase.co:5432/postgres`。
+- 已将本地 `.env` 更新为 `DATABASE_URL` 优先，同时保留拆分形式的 `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`。
+- 连接串解析验证通过：protocol=`postgresql:`，host=`db.xgrmcwcgkbektyxrhbhu.supabase.co`，port=`5432`，database=`postgres`，user=`postgres`。
+- DNS 验证仍失败：`nslookup db.xgrmcwcgkbektyxrhbhu.supabase.co` 返回 `No answer`；`pg.Client` 直连仍报 `getaddrinfo ENOTFOUND db.xgrmcwcgkbektyxrhbhu.supabase.co`。
+- 结论：本轮不是代码或连接串格式问题，而是该 Supabase host 当前无法解析；需要从 Supabase 后台复制可解析的 Direct connection / Session pooler / Transaction pooler host 后再继续验证。
+
+
+### 2026-06-10 Phase 9 Supabase Pooler 验证完成
+- 用户提供 Supabase pooler 连接信息：host=`aws-1-ap-southeast-1.pooler.supabase.com`，port=`6543`，database=`postgres`，user=`postgres.xgrmcwcgkbektyxrhbhu`，密码沿用。
+- 已将本地 `.env` 更新为 pooler `DATABASE_URL` 优先，并同步 `.env.example` 为 pooler 模板；真实密码仍只在 `.env`，且 `.env` 被 `.gitignore` 忽略。
+- DNS 验证通过：pooler host 解析到 AWS ELB CNAME，并返回 `54.179.210.0` / `13.213.241.248`。
+- `pg.Client` 直连验证通过：返回 current_database=`postgres`，current_user=`postgres`。
+- 全量测试通过：`npm test` 8/8 pass，覆盖注册、登录、Story、搜索、Profile、Reports、审核队列、互动持久化。
+- Phase 9 状态更新为 complete。
+
+
+### 2026-06-10 Navicat 表定位与 public 迁移
+- 用户反馈 Navicat 已连接 Supabase Postgres，但找不到项目表。
+- 诊断结果：当前连接 database=`postgres`，默认 schema=`public`；迁移前 `public` 下没有 Pitfall 项目表，只有 Supabase 自带的 `auth` / `storage` / `realtime` / `vault` 等 schema 表。
+- 原因：此前 `npm test` 使用临时 `test_*` schema 做隔离测试，测试结束后会清理，所以 Navicat 不会看到这些测试表。
+- 已运行正式 `createDatabase()` 迁移/seed，在 `postgres.public` 下创建项目表：`users`、`sessions`、`stories`、`materials`、`comments`、`responses`、`alternatives`、`reactions`、`reports`。
+- 验证结果：`public.users=1`、`public.stories=6`、`public.materials=6`，其余互动表当前为 0 行。
+- Navicat 查看路径：连接 Supabase 后展开 database `postgres` → schema `public` → `Tables`。
+
+
+### 2026-06-10 本地服务与 Profile 接口修复
+- 用户反馈 `http://127.0.0.1:8791/api/profile` 找不到。
+- 复现结果：旧运行进程返回 `404 Route GET:/api/profile not found`，但当前 `src/app.js` 已定义 `GET /api/profile`，根因是 8791 上仍运行旧 Node 进程。
+- 已终止旧进程并用 `npm run dev` 重启本地服务，服务监听 `http://127.0.0.1:8791`。
+- 验证结果：`GET /api/health` 返回 200；未登录访问 `GET /api/profile` 正常返回 401；注册后携带 Bearer token 访问 `GET /api/profile` 返回 200 和用户档案统计。
+- 已修复 `app.html` 在 `file://` 方式打开时的 API base：当 `location.protocol === 'file:'` 时自动请求 `http://127.0.0.1:8791/api/...`，避免浏览器把 `/api/...` 解析到本地文件根路径。
+- 额外验证：`GET /api/config` 返回 Pitfall / 小众点评网与 6 个 worlds；`GET /api/stories?world=旅行` 返回 200；`GET /` 返回 `app.html`。
+- 正确入口：浏览器打开 `http://127.0.0.1:8791/`；`/api/profile` 是鉴权接口，不应裸开查看。
+
+
+### 2026-06-10 Vercel 环境变量说明
+- 用户询问：提交代码后 Vercel 自动部署，但本地 `.env` 不提交，线上如何访问 Supabase 数据库。
+- 结论：`.env` 不应该提交到 Git；Vercel 线上数据库凭据应配置在 Vercel Project Settings → Environment Variables。
+- 当前代码读取方式：`src/db.js` 优先读取 `DATABASE_URL`，并通过 `DB_SSL=true` 开启 SSL；也支持 `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` 拆分配置。
+- 建议 Vercel 至少配置：`DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres`，`DB_SSL=true`。
+- 重要发现：当前 `vercel.json` 仍是静态站路由配置，只发布 `index.html` / `worlds-mobile.html` 等静态页面；若要线上 `/api/...` 访问 Supabase，还需要把 Fastify 后端适配为 Vercel Serverless Function 或改用单独后端服务。
+- 安全要求：真实 Supabase 密码只放本机 `.env` 和 Vercel 加密环境变量，不写入 README、`vercel.json`、提交记录或前端 JS。
+
+
+### 2026-06-10 Vercel API 部署入口补齐
+- 用户已在 Vercel 后台添加 Supabase 环境变量，并要求提交代码触发自动部署。
+- 提交前检查：`.env` 被 `.gitignore` 忽略，`git status --ignored .env .env.example` 显示 `.env` 为 ignored、`.env.example` 为可提交占位模板。
+- 新增 `api/[...path].js`：作为 Vercel Serverless Function 入口，复用 `buildApp()` 和 `createDatabase()`，由运行时环境变量连接 Supabase。
+- 更新 `vercel.json`：将 `/api/(.*)` rewrite 到 `/api/[...path].js`，保留 `/pc`、`/m`、`/mobile` 静态页面入口。
+- 更新 `README.md`：记录 Vercel Environment Variables 配置方式与线上 `/api/*` 入口。
+- 提交前验证计划：运行 `node --check`、`npm test`，并再次扫描待提交 diff，确认没有真实数据库密码。

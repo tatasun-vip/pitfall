@@ -7,9 +7,9 @@
 
 ## 当前文件
 
-- `app.html`：全栈交互页，连接真实 API、注册登录、SQLite 数据库、Story 投递、材料链、评论、对象回应、替代路线和轻反应。
+- `app.html`：全栈交互页，连接真实 API、注册登录、Supabase Postgres 数据库、Story 投递、材料链、评论、对象回应、替代路线和轻反应。
 - `src/app.js`：Fastify API 路由与鉴权。
-- `src/db.js`：SQLite 数据模型、迁移、种子数据、用户/Story/互动持久化。
+- `src/db.js`：Supabase Postgres 数据模型、迁移、种子数据、用户/Story/互动持久化。
 - `src/server.js`：本地全栈服务入口。
 - `tests/api.test.js`：注册、登录、数据库写入、Story 与互动 API 测试。
 - `index.html`：单文件高保真产品概念页，内含 CSS、SVG 图标系统与 JS 交互。
@@ -87,11 +87,13 @@ Pitfall 的气质从“吐槽平台”调整为“年轻人的生活导航”。
 
 ## 全栈版本地运行
 
-安装依赖后运行：
+安装依赖并配置 `.env` 后运行：
 
 ```bash
 cd /Users/suntata/Desktop/pitfall
 npm install
+cp .env.example .env
+# 修改 .env 为 Supabase Postgres 连接信息
 npm run dev
 ```
 
@@ -116,12 +118,41 @@ npm test
 当前已实现：
 
 - 注册 / 登录 / Token 鉴权
-- `users` / `sessions` / `stories` / `materials` / `comments` / `responses` / `alternatives` / `reactions` SQLite 表
+- `users` / `sessions` / `stories` / `materials` / `comments` / `responses` / `alternatives` / `reactions` Postgres 表
 - 六个世界 Feed：校园、旅行、职场、租住、跨境、美业
 - Story 投递并写入数据库
 - 材料链：收据、合同、翻译、截图等
 - 对象详情：原文、译文、材料、讨论房间、对象回应、替代路线
 - 轻反应：有用 / 同感 / 收藏
+
+## Supabase Postgres 配置
+
+后端读取 `.env` 或部署环境变量：
+
+```bash
+DATABASE_URL=postgresql://postgres.xxxxxxxxxxxxxxxxxxxx:replace-me@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
+DB_SSL=true
+DB_HOST=aws-1-ap-southeast-1.pooler.supabase.com
+DB_PORT=6543
+DB_NAME=postgres
+DB_USER=postgres.xxxxxxxxxxxxxxxxxxxx
+DB_PASSWORD=replace-me
+```
+
+推荐使用 Supabase pooler host（端口 `6543`），避免 direct host 在本地网络无法解析。
+
+`.env` 已加入 `.gitignore`，不要把真实数据库密码提交到仓库。
+
+## Vercel 部署
+
+Vercel 不读取本机 `.env`，需要在项目后台 `Project Settings` → `Environment Variables` 配置：
+
+```bash
+DATABASE_URL=postgresql://postgres.xxxxxxxxxxxxxxxxxxxx:replace-me@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
+DB_SSL=true
+```
+
+线上 `/api/*` 由 `api/[...path].js` 接入 Fastify 后端，并复用 `src/app.js` / `src/db.js` 连接 Supabase。静态入口继续由 `vercel.json` 发布：`/`、`/pc`、`/m`、`/mobile`。
 
 ## 静态原型本地打开
 

@@ -68,8 +68,9 @@
   <div id="toast" class="toast"></div>
 <script>
 const state={token:localStorage.getItem('pitfall_token')||'',user:null,world:'旅行',stories:[],selected:null,mode:'register'};
+const API_BASE=location.protocol==='file:'?'http://127.0.0.1:8791':'';
 const $=id=>document.getElementById(id);function toast(t){$('toast').textContent=t;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1800)}
-async function api(path,{method='GET',body,auth=false}={}){const res=await fetch(path,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(auth&&state.token?{authorization:'Bearer '+state.token}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||data.error||'请求失败');return data}
+async function api(path,{method='GET',body,auth=false}={}){const url=path.startsWith('http')?path:API_BASE+path;const res=await fetch(url,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(auth&&state.token?{authorization:'Bearer '+state.token}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||data.error||'请求失败');return data}
 function renderWorlds(worlds){$('worlds').innerHTML='';$('storyWorld').innerHTML='';$('searchWorld').innerHTML='<option value="">全部世界</option>';worlds.forEach(w=>{const b=document.createElement('button');b.className='world'+(w===state.world?' active':'');b.textContent=w;b.onclick=()=>{state.world=w;renderWorlds(worlds);loadStories()};$('worlds').appendChild(b);const o=document.createElement('option');o.value=w;o.textContent=w;if(w===state.world)o.selected=true;$('storyWorld').appendChild(o);const s=document.createElement('option');s.value=w;s.textContent=w;$('searchWorld').appendChild(s)})}
 function userView(){ $('me').textContent=state.user?`${state.user.username} · 信用 ${state.user.trustScore}`:'未登录'; }
 function riskText(r){return r==='high'?'高风险':r==='caution'?'谨慎':'观察'}

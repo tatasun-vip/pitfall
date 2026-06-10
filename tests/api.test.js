@@ -1,7 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import 'dotenv/config';
+import pg from 'pg';
 import { buildApp } from '../src/app.js';
-import { createDatabase } from '../src/db.js';
+import { closeDatabase, createDatabase, databaseConfigFromEnv } from '../src/db.js';
+
+const { Client } = pg;
+
+async function setupApp() {
+  const schema = `test_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const admin = new Client(databaseConfigFromEnv());
+  await admin.connect();
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  await admin.end();
+
+  const db = await createDatabase(databaseConfigFromEnv({ ...process.env, DB_SCHEMA: schema }), { seed: false });
+  const app = buildApp({ db });
+  await app.ready();
+
+  async function cleanup() {
+    await app.close();
+    await closeDatabase(db);
+    const dropper = new Client(databaseConfigFromEnv());
+    await dropper.connect();
+    await dropper.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+    await dropper.end();
+  }
+
+  return { app, cleanup };
+}
 
 async function request(app, method, url, body, token) {
   const res = await app.inject({
@@ -19,9 +46,7 @@ async function request(app, method, url, body, token) {
 }
 
 test('registration creates a real database user and returns a usable token', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '清醒用户',
@@ -38,13 +63,11 @@ test('registration creates a real database user and returns a usable token', asy
   assert.equal(me.status, 200);
   assert.equal(me.body.user.email, 'awake@example.com');
 
-  await app.close();
+  await cleanup();
 });
 
 test('login rejects wrong password and accepts the correct password', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   await request(app, 'POST', '/api/auth/register', {
     username: '旅行判断者',
@@ -65,13 +88,11 @@ test('login rejects wrong password and accepts the correct password', async () =
   assert.equal(good.status, 200);
   assert.ok(good.body.token);
 
-  await app.close();
+  await cleanup();
 });
 
 test('authenticated users can publish stories with material chain items', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '材料优先',
@@ -103,13 +124,11 @@ test('authenticated users can publish stories with material chain items', async 
   assert.equal(feed.body.stories.length, 1);
   assert.equal(feed.body.stories[0].materials.length, 2);
 
-  await app.close();
+  await cleanup();
 });
 
 test('search filters stories by query, world and risk level', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '搜索验证者',
@@ -141,13 +160,11 @@ test('search filters stories by query, world and risk level', async () => {
   assert.equal(search.body.stories[0].targetName, '罗马菜单样本');
   assert.equal(search.body.total, 1);
 
-  await app.close();
+  await cleanup();
 });
 
 test('profile summarizes user contribution and trust activity', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '信用贡献者',
@@ -177,13 +194,11 @@ test('profile summarizes user contribution and trust activity', async () => {
   assert.equal(profile.body.profile.stats.reactions, 1);
   assert.ok(profile.body.profile.user.trustScore >= 52);
 
-  await app.close();
+  await cleanup();
 });
 
 test('reports create governance records without deleting the original story', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '治理提交者',
@@ -214,13 +229,11 @@ test('reports create governance records without deleting the original story', as
   assert.equal(detail.body.story.reports.length, 1);
   assert.equal(detail.body.story.status, 'published');
 
-  await app.close();
+  await cleanup();
 });
 
 test('moderation queue lists reports and can update report status', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '审核员',
@@ -254,13 +267,11 @@ test('moderation queue lists reports and can update report status', async () => 
   assert.equal(updated.body.report.status, 'reviewing');
   assert.equal(updated.body.report.moderatorNote, '已进入材料补充审核。');
 
-  await app.close();
+  await cleanup();
 });
 
 test('story interactions persist comments, target responses, alternatives and reactions', async () => {
-  const db = createDatabase(':memory:');
-  const app = buildApp({ db });
-  await app.ready();
+  const { app, cleanup } = await setupApp();
 
   const reg = await request(app, 'POST', '/api/auth/register', {
     username: '房间讨论者',
@@ -309,5 +320,5 @@ test('story interactions persist comments, target responses, alternatives and re
   assert.equal(detail.body.story.alternatives.length, 1);
   assert.equal(detail.body.story.reactions.useful, 1);
 
-  await app.close();
+  await cleanup();
 });

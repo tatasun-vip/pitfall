@@ -62,14 +62,14 @@ export function buildApp({ db }) {
   app.decorate('authenticate', async (request, reply) => {
     const header = request.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const user = token ? getUserByToken(db, token) : null;
+    const user = token ? await getUserByToken(db, token) : null;
     if (!user) return reply.code(401).send({ error: 'UNAUTHORIZED', message: '请先登录后再继续。' });
     request.user = user;
   });
 
   app.setErrorHandler((error, request, reply) => {
     if (error?.issues) return reply.code(400).send({ error: 'VALIDATION_ERROR', issues: error.issues });
-    if (String(error?.message || '').includes('UNIQUE constraint failed: users.email')) return reply.code(409).send({ error: 'EMAIL_EXISTS', message: '这个邮箱已经注册。' });
+    if (String(error?.message || '').includes('users_email_key') || String(error?.code) === '23505') return reply.code(409).send({ error: 'EMAIL_EXISTS', message: '这个邮箱已经注册。' });
     request.log?.error?.(error);
     return reply.code(500).send({ error: 'INTERNAL_ERROR', message: '服务暂时不可用。' });
   });
@@ -87,16 +87,16 @@ export function buildApp({ db }) {
 
   app.post('/api/auth/register', async (request, reply) => {
     const data = registerSchema.parse(request.body || {});
-    const user = createUser(db, data);
-    const token = createSession(db, user.id);
+    const user = await createUser(db, data);
+    const token = await createSession(db, user.id);
     return reply.code(201).send({ user, token });
   });
 
   app.post('/api/auth/login', async (request, reply) => {
     const data = loginSchema.parse(request.body || {});
-    const user = authenticateUser(db, data);
+    const user = await authenticateUser(db, data);
     if (!user) return reply.code(401).send({ error: 'INVALID_CREDENTIALS', message: '邮箱或密码不正确。' });
-    const token = createSession(db, user.id);
+    const token = await createSession(db, user.id);
     return { user, token };
   });
 
@@ -106,7 +106,7 @@ export function buildApp({ db }) {
     const world = typeof request.query.world === 'string' ? request.query.world : undefined;
     const q = typeof request.query.q === 'string' ? request.query.q : '';
     const risk = typeof request.query.risk === 'string' ? request.query.risk : undefined;
-    const stories = q || risk ? searchStories(db, { q, world, risk }) : listStories(db, { world });
+    const stories = q || risk ? await searchStories(db, { q, world, risk }) : await listStories(db, { world });
     return { stories, total: stories.length };
   });
 
@@ -114,34 +114,34 @@ export function buildApp({ db }) {
     const q = typeof request.query.q === 'string' ? request.query.q : '';
     const world = typeof request.query.world === 'string' ? request.query.world : undefined;
     const risk = typeof request.query.risk === 'string' ? request.query.risk : undefined;
-    const stories = searchStories(db, { q, world, risk });
+    const stories = await searchStories(db, { q, world, risk });
     return { stories, total: stories.length, q, world, risk };
   });
 
   app.get('/api/profile', { preHandler: app.authenticate }, async (request) => {
-    const profile = getProfile(db, request.user.id);
+    const profile = await getProfile(db, request.user.id);
     return { profile };
   });
 
   app.get('/api/stories/:id', async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     return { story };
   });
 
   app.post('/api/stories/:id/reports', { preHandler: app.authenticate }, async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     const body = request.body || {};
     const reason = typeof body.reason === 'string' ? body.reason : '';
     const note = typeof body.body === 'string' ? body.body : '';
     if (!reason || !note) return reply.code(400).send({ error: 'VALIDATION_ERROR' });
-    const report = createReport(db, story.id, request.user.id, { reason, body: note });
+    const report = await createReport(db, story.id, request.user.id, { reason, body: note });
     return reply.code(201).send({ report });
   });
 
   app.get('/api/moderation/reports', { preHandler: app.authenticate }, async () => ({
-    reports: listReports(db)
+    reports: await listReports(db)
   }));
 
   app.patch('/api/moderation/reports/:id', { preHandler: app.authenticate }, async (request, reply) => {
@@ -149,46 +149,46 @@ export function buildApp({ db }) {
     const status = typeof body.status === 'string' ? body.status : '';
     const note = typeof body.note === 'string' ? body.note : '';
     if (!['open', 'reviewing', 'resolved', 'rejected'].includes(status)) return reply.code(400).send({ error: 'VALIDATION_ERROR' });
-    const report = updateReportStatus(db, Number(request.params.id), { status, note });
+    const report = await updateReportStatus(db, Number(request.params.id), { status, note });
     if (!report) return reply.code(404).send({ error: 'NOT_FOUND' });
     return { report };
   });
 
   app.post('/api/stories', { preHandler: app.authenticate }, async (request, reply) => {
     const data = storySchema.parse(request.body || {});
-    const story = createStory(db, request.user.id, data);
+    const story = await createStory(db, request.user.id, data);
     return reply.code(201).send({ story });
   });
 
   app.post('/api/stories/:id/comments', { preHandler: app.authenticate }, async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     const data = commentSchema.parse(request.body || {});
-    const comment = addComment(db, story.id, request.user.id, data.body);
+    const comment = await addComment(db, story.id, request.user.id, data.body);
     return reply.code(201).send({ comment });
   });
 
   app.post('/api/stories/:id/responses', { preHandler: app.authenticate }, async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     const data = responseSchema.parse(request.body || {});
-    const response = addResponse(db, story.id, request.user.id, data);
+    const response = await addResponse(db, story.id, request.user.id, data);
     return reply.code(201).send({ response });
   });
 
   app.post('/api/stories/:id/alternatives', { preHandler: app.authenticate }, async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     const data = alternativeSchema.parse(request.body || {});
-    const alternative = addAlternative(db, story.id, request.user.id, data);
+    const alternative = await addAlternative(db, story.id, request.user.id, data);
     return reply.code(201).send({ alternative });
   });
 
   app.post('/api/stories/:id/reactions', { preHandler: app.authenticate }, async (request, reply) => {
-    const story = getStoryById(db, Number(request.params.id));
+    const story = await getStoryById(db, Number(request.params.id));
     if (!story) return reply.code(404).send({ error: 'NOT_FOUND' });
     const data = reactionSchema.parse(request.body || {});
-    const reactions = toggleReaction(db, story.id, request.user.id, data.type);
+    const reactions = await toggleReaction(db, story.id, request.user.id, data.type);
     return { reactions };
   });
 

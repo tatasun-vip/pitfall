@@ -1,42 +1,71 @@
-import Database from 'better-sqlite3';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { dirname } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import pg from 'pg';
+
+const { Pool } = pg;
 
 const WORLDS = ['校园', '旅行', '职场', '租住', '跨境', '美业'];
 const RISK_LEVELS = ['watch', 'caution', 'high'];
 const REACTION_TYPES = ['useful', 'same', 'saved'];
 
-export function createDatabase(filename = 'data/pitfall.sqlite') {
-  if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true });
-  const db = new Database(filename);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  migrate(db);
-  if (filename !== ':memory:') seed(db);
-  return db;
+export function databaseConfigFromEnv(env = process.env) {
+  const base = env.DATABASE_URL
+    ? {
+        connectionString: env.DATABASE_URL,
+        ssl: parseSsl(env.DB_SSL)
+      }
+    : {
+        host: env.DB_HOST,
+        port: Number(env.DB_PORT || 5432),
+        database: env.DB_NAME || env.PGDATABASE || 'postgres',
+        user: env.DB_USER || env.PGUSER,
+        password: env.DB_PASSWORD || env.PGPASSWORD,
+        ssl: parseSsl(env.DB_SSL)
+      };
+  if (env.DB_SCHEMA) base.options = `-c search_path=${quoteIdentifier(env.DB_SCHEMA)},public`;
+  return base;
 }
 
-function migrate(db) {
-  db.exec(`
+function quoteIdentifier(value) {
+  return String(value).replaceAll('"', '""');
+}
+
+function parseSsl(value) {
+  if (String(value).toLowerCase() === 'true') return { rejectUnauthorized: false };
+  if (String(value).toLowerCase() === 'false') return false;
+  return false;
+}
+
+export async function createDatabase(config = databaseConfigFromEnv(), options = {}) {
+  const pool = new Pool(config);
+  await migrate(pool);
+  if (options.seed !== false) await seed(pool);
+  return pool;
+}
+
+export async function closeDatabase(db) {
+  await db?.end?.();
+}
+
+export async function migrate(db) {
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id BIGSERIAL PRIMARY KEY,
       username TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       trust_score INTEGER NOT NULL DEFAULT 50,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS stories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       world TEXT NOT NULL,
       target_name TEXT NOT NULL,
       title TEXT NOT NULL,
@@ -45,76 +74,72 @@ function migrate(db) {
       original_text TEXT NOT NULL DEFAULT '',
       translated_text TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'published',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS materials (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
       label TEXT NOT NULL,
       url TEXT NOT NULL DEFAULT '',
       strength TEXT NOT NULL DEFAULT 'medium',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS comments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       body TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS responses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       responder_name TEXT NOT NULL,
       body TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS alternatives (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       reason TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS reactions (
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (story_id, user_id, type)
     );
 
     CREATE TABLE IF NOT EXISTS reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id BIGSERIAL PRIMARY KEY,
+      story_id BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       reason TEXT NOT NULL,
       body TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',
       moderator_note TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE reports ADD COLUMN IF NOT EXISTS moderator_note TEXT NOT NULL DEFAULT '';
   `);
-  addColumnIfMissing(db, 'reports', 'moderator_note', "TEXT NOT NULL DEFAULT ''");
 }
 
-function addColumnIfMissing(db, table, column, definition) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name);
-  if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-}
-
-function seed(db) {
-  const count = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
-  if (count > 0) return;
-  const user = createUser(db, { username: 'Pitfall 编辑部', email: 'seed@pitfall.local', password: randomBytes(12).toString('hex') });
+async function seed(db) {
+  const { rows } = await db.query("SELECT COUNT(*)::int AS c FROM users WHERE email = 'seed@pitfall.local'");
+  if (rows[0].c > 0) return;
+  const user = await createUser(db, { username: 'Pitfall 编辑部', email: 'seed@pitfall.local', password: randomBytes(12).toString('hex') });
   const samples = [
     ['校园', '海外课程中介样本', '保录承诺和退款路径不清楚', '匿名样本：先看合同原文、退款触发条件和服务边界。', 'watch'],
     ['旅行', '海边菜单样本', '口头报价与账单条目不一致', '匿名样本：菜单原文、账单和现场照片应一起看。', 'caution'],
@@ -123,15 +148,20 @@ function seed(db) {
     ['跨境', '低价预售样本', '跨境预售周期和退款入口不透明', '匿名样本：先确认付款主体、物流节点和争议路径。', 'caution'],
     ['美业', '术前告知样本', '体验价和后续项目边界模糊', '匿名样本：术前告知、药品批号和医生资质优先。', 'watch']
   ];
-  const insertStory = db.prepare(`INSERT INTO stories (author_id, world, target_name, title, summary, risk_level, original_text, translated_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  const insertMaterial = db.prepare(`INSERT INTO materials (story_id, type, label, url, strength) VALUES (?, ?, ?, ?, ?)`);
-  const tx = db.transaction(() => {
-    for (const [world, target, title, summary, risk] of samples) {
-      const info = insertStory.run(user.id, world, target, title, summary, risk, 'Original material preserved for context.', '已保留原文，译文仅供快速判断。');
-      insertMaterial.run(info.lastInsertRowid, 'sample', '匿名化材料样本', '', 'medium');
-    }
-  });
-  tx();
+  for (const [world, target, title, summary, risk] of samples) {
+    const story = await createStory(db, user.id, {
+      world,
+      targetName: target,
+      title,
+      summary,
+      riskLevel: risk,
+      originalText: 'Original material preserved for context.',
+      translatedText: '已保留原文，译文仅供快速判断。',
+      materials: [{ type: 'sample', label: '匿名化材料样本', url: '', strength: 'medium' }]
+    });
+    await db.query('UPDATE users SET trust_score = 50 WHERE id = $1', [user.id]);
+    await hydrateStory(db, story, false);
+  }
 }
 
 function hashPassword(password) {
@@ -150,7 +180,7 @@ function verifyPassword(password, stored) {
 
 function publicUser(row) {
   return {
-    id: row.id,
+    id: Number(row.id),
     username: row.username,
     email: row.email,
     trustScore: row.trust_score,
@@ -158,31 +188,35 @@ function publicUser(row) {
   };
 }
 
-export function createUser(db, { username, email, password }) {
-  const info = db.prepare('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)').run(username.trim(), email.toLowerCase().trim(), hashPassword(password));
-  return getUserById(db, info.lastInsertRowid);
+export async function createUser(db, { username, email, password }) {
+  const { rows } = await db.query(
+    'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, trust_score, created_at',
+    [username.trim(), email.toLowerCase().trim(), hashPassword(password)]
+  );
+  return publicUser(rows[0]);
 }
 
-export function authenticateUser(db, { email, password }) {
-  const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
+export async function authenticateUser(db, { email, password }) {
+  const { rows } = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+  const row = rows[0];
   if (!row || !verifyPassword(password, row.password_hash)) return null;
   return publicUser(row);
 }
 
-export function getUserById(db, id) {
-  const row = db.prepare('SELECT id, username, email, trust_score, created_at FROM users WHERE id = ?').get(id);
-  return row ? publicUser(row) : null;
+export async function getUserById(db, id) {
+  const { rows } = await db.query('SELECT id, username, email, trust_score, created_at FROM users WHERE id = $1', [id]);
+  return rows[0] ? publicUser(rows[0]) : null;
 }
 
-export function createSession(db, userId) {
+export async function createSession(db, userId) {
   const token = randomBytes(32).toString('hex');
-  db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').run(token, userId);
+  await db.query('INSERT INTO sessions (token, user_id) VALUES ($1, $2)', [token, userId]);
   return token;
 }
 
-export function getUserByToken(db, token) {
-  const row = db.prepare(`SELECT u.id, u.username, u.email, u.trust_score, u.created_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`).get(token);
-  return row ? publicUser(row) : null;
+export async function getUserByToken(db, token) {
+  const { rows } = await db.query(`SELECT u.id, u.username, u.email, u.trust_score, u.created_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = $1`, [token]);
+  return rows[0] ? publicUser(rows[0]) : null;
 }
 
 function validateWorld(world) {
@@ -193,34 +227,43 @@ function validateRisk(level) {
   if (!RISK_LEVELS.includes(level)) throw new Error('INVALID_RISK');
 }
 
-export function createStory(db, userId, input) {
+export async function createStory(db, userId, input) {
   validateWorld(input.world);
   validateRisk(input.riskLevel);
-  const materials = Array.isArray(input.materials) ? input.materials.slice(0, 8) : [];
-  const tx = db.transaction(() => {
-    const info = db.prepare(`INSERT INTO stories (author_id, world, target_name, title, summary, risk_level, original_text, translated_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      userId,
-      input.world,
-      input.targetName.trim(),
-      input.title.trim(),
-      input.summary.trim(),
-      input.riskLevel,
-      input.originalText || '',
-      input.translatedText || ''
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `INSERT INTO stories (author_id, world, target_name, title, summary, risk_level, original_text, translated_text)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
+      [userId, input.world, input.targetName.trim(), input.title.trim(), input.summary.trim(), input.riskLevel, input.originalText || '', input.translatedText || '']
     );
-    const insertMaterial = db.prepare('INSERT INTO materials (story_id, type, label, url, strength) VALUES (?, ?, ?, ?, ?)');
-    for (const m of materials) {
-      insertMaterial.run(info.lastInsertRowid, m.type || 'note', m.label || '材料', m.url || '', m.strength || 'medium');
+    const storyId = Number(rows[0].id);
+    const materials = Array.isArray(input.materials) ? input.materials.slice(0, 8) : [];
+    for (const material of materials) {
+      await client.query('INSERT INTO materials (story_id, type, label, url, strength) VALUES ($1, $2, $3, $4, $5)', [
+        storyId,
+        material.type || 'note',
+        material.label || '材料',
+        material.url || '',
+        material.strength || 'medium'
+      ]);
     }
-    db.prepare('UPDATE users SET trust_score = MIN(100, trust_score + 2) WHERE id = ?').run(userId);
-    return getStoryById(db, info.lastInsertRowid);
-  });
-  return tx();
+    await client.query('UPDATE users SET trust_score = LEAST(100, trust_score + 2) WHERE id = $1', [userId]);
+    await client.query('COMMIT');
+    return getStoryById(db, storyId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function storyBase(row) {
   return {
-    id: row.id,
+    id: Number(row.id),
     world: row.world,
     targetName: row.target_name,
     title: row.title,
@@ -231,113 +274,155 @@ function storyBase(row) {
     status: row.status,
     createdAt: row.created_at,
     author: {
-      id: row.author_id,
+      id: Number(row.author_id),
       username: row.username,
       trustScore: row.trust_score
     }
   };
 }
 
-export function listStories(db, { world } = {}) {
-  const rows = world
-    ? db.prepare(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id WHERE s.world = ? ORDER BY s.id DESC`).all(world)
-    : db.prepare(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id ORDER BY s.id DESC`).all();
-  return rows.map((row) => hydrateStory(db, storyBase(row), false));
+export async function listStories(db, { world } = {}) {
+  const { rows } = world
+    ? await db.query(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id WHERE s.world = $1 ORDER BY s.id DESC`, [world])
+    : await db.query(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id ORDER BY s.id DESC`);
+  return Promise.all(rows.map((row) => hydrateStory(db, storyBase(row), false)));
 }
 
-export function searchStories(db, { q = '', world, risk } = {}) {
+export async function searchStories(db, { q = '', world, risk } = {}) {
   const clauses = [];
   const params = [];
   if (q) {
-    clauses.push('(s.title LIKE ? OR s.summary LIKE ? OR s.target_name LIKE ?)');
-    const like = `%${q}%`;
-    params.push(like, like, like);
+    params.push(`%${q}%`);
+    clauses.push(`(s.title ILIKE $${params.length} OR s.summary ILIKE $${params.length} OR s.target_name ILIKE $${params.length})`);
   }
   if (world) {
-    clauses.push('s.world = ?');
     params.push(world);
+    clauses.push(`s.world = $${params.length}`);
   }
   if (risk) {
-    clauses.push('s.risk_level = ?');
     params.push(risk);
+    clauses.push(`s.risk_level = $${params.length}`);
   }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  const rows = db.prepare(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id ${where} ORDER BY s.id DESC`).all(...params);
-  return rows.map((row) => hydrateStory(db, storyBase(row), false));
+  const { rows } = await db.query(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id ${where} ORDER BY s.id DESC`, params);
+  return Promise.all(rows.map((row) => hydrateStory(db, storyBase(row), false)));
 }
 
-export function getProfile(db, userId) {
-  const user = getUserById(db, userId);
+export async function getProfile(db, userId) {
+  const user = await getUserById(db, userId);
   if (!user) return null;
-  const stats = {
-    stories: db.prepare('SELECT COUNT(*) AS c FROM stories WHERE author_id = ?').get(userId).c,
-    comments: db.prepare('SELECT COUNT(*) AS c FROM comments WHERE user_id = ?').get(userId).c,
-    responses: db.prepare('SELECT COUNT(*) AS c FROM responses WHERE user_id = ?').get(userId).c,
-    alternatives: db.prepare('SELECT COUNT(*) AS c FROM alternatives WHERE user_id = ?').get(userId).c,
-    reactions: db.prepare('SELECT COUNT(*) AS c FROM reactions WHERE user_id = ?').get(userId).c,
-    reports: db.prepare('SELECT COUNT(*) AS c FROM reports WHERE user_id = ?').get(userId).c
+  const [{ rows: stories }, { rows: comments }, { rows: responses }, { rows: alternatives }, { rows: reactions }, { rows: reports }] = await Promise.all([
+    db.query('SELECT COUNT(*)::int AS c FROM stories WHERE author_id = $1', [userId]),
+    db.query('SELECT COUNT(*)::int AS c FROM comments WHERE user_id = $1', [userId]),
+    db.query('SELECT COUNT(*)::int AS c FROM responses WHERE user_id = $1', [userId]),
+    db.query('SELECT COUNT(*)::int AS c FROM alternatives WHERE user_id = $1', [userId]),
+    db.query('SELECT COUNT(*)::int AS c FROM reactions WHERE user_id = $1', [userId]),
+    db.query('SELECT COUNT(*)::int AS c FROM reports WHERE user_id = $1', [userId])
+  ]);
+  return {
+    user,
+    stats: {
+      stories: stories[0].c,
+      comments: comments[0].c,
+      responses: responses[0].c,
+      alternatives: alternatives[0].c,
+      reactions: reactions[0].c,
+      reports: reports[0].c
+    }
   };
-  return { user, stats };
 }
 
-export function createReport(db, storyId, userId, { reason, body }) {
-  const info = db.prepare('INSERT INTO reports (story_id, user_id, reason, body) VALUES (?, ?, ?, ?)').run(storyId, userId, reason.trim(), body.trim());
-  return db.prepare('SELECT id, story_id AS storyId, user_id AS userId, reason, body, status, moderator_note AS moderatorNote, created_at AS createdAt FROM reports WHERE id = ?').get(info.lastInsertRowid);
+export async function createReport(db, storyId, userId, { reason, body }) {
+  const { rows } = await db.query(
+    'INSERT INTO reports (story_id, user_id, reason, body) VALUES ($1, $2, $3, $4) RETURNING id, story_id AS "storyId", user_id AS "userId", reason, body, status, moderator_note AS "moderatorNote", created_at AS "createdAt"',
+    [storyId, userId, reason.trim(), body.trim()]
+  );
+  return normalizeIdRow(rows[0], ['id', 'storyId', 'userId']);
 }
 
-export function listReports(db) {
-  return db.prepare(`SELECT r.id, r.story_id AS storyId, r.user_id AS userId, r.reason, r.body, r.status, r.moderator_note AS moderatorNote, r.created_at AS createdAt, s.title AS storyTitle, s.target_name AS targetName, u.username AS reporterName FROM reports r JOIN stories s ON s.id = r.story_id JOIN users u ON u.id = r.user_id ORDER BY r.id DESC`).all();
+export async function listReports(db) {
+  const { rows } = await db.query(`SELECT r.id, r.story_id AS "storyId", r.user_id AS "userId", r.reason, r.body, r.status, r.moderator_note AS "moderatorNote", r.created_at AS "createdAt", s.title AS "storyTitle", s.target_name AS "targetName", u.username AS "reporterName" FROM reports r JOIN stories s ON s.id = r.story_id JOIN users u ON u.id = r.user_id ORDER BY r.id DESC`);
+  return rows.map((row) => normalizeIdRow(row, ['id', 'storyId', 'userId']));
 }
 
-export function updateReportStatus(db, reportId, { status, note = '' }) {
-  db.prepare('UPDATE reports SET status = ?, moderator_note = ? WHERE id = ?').run(status, note.trim(), reportId);
-  return db.prepare('SELECT id, story_id AS storyId, user_id AS userId, reason, body, status, moderator_note AS moderatorNote, created_at AS createdAt FROM reports WHERE id = ?').get(reportId);
+export async function updateReportStatus(db, reportId, { status, note = '' }) {
+  const { rows } = await db.query(
+    'UPDATE reports SET status = $1, moderator_note = $2 WHERE id = $3 RETURNING id, story_id AS "storyId", user_id AS "userId", reason, body, status, moderator_note AS "moderatorNote", created_at AS "createdAt"',
+    [status, note.trim(), reportId]
+  );
+  return rows[0] ? normalizeIdRow(rows[0], ['id', 'storyId', 'userId']) : null;
 }
 
-export function getStoryById(db, id) {
-  const row = db.prepare(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id WHERE s.id = ?`).get(id);
-  if (!row) return null;
-  return hydrateStory(db, storyBase(row), true);
+export async function getStoryById(db, id) {
+  const { rows } = await db.query(`SELECT s.*, u.username, u.trust_score FROM stories s JOIN users u ON u.id = s.author_id WHERE s.id = $1`, [id]);
+  if (!rows[0]) return null;
+  return hydrateStory(db, storyBase(rows[0]), true);
 }
 
-function hydrateStory(db, story, includeRooms = true) {
-  story.materials = db.prepare('SELECT id, type, label, url, strength, created_at AS createdAt FROM materials WHERE story_id = ? ORDER BY id ASC').all(story.id);
-  story.reactions = reactionCounts(db, story.id);
+async function hydrateStory(db, story, includeRooms = true) {
+  const [{ rows: materials }, reactions] = await Promise.all([
+    db.query('SELECT id, type, label, url, strength, created_at AS "createdAt" FROM materials WHERE story_id = $1 ORDER BY id ASC', [story.id]),
+    reactionCounts(db, story.id)
+  ]);
+  story.materials = materials.map((row) => normalizeIdRow(row, ['id']));
+  story.reactions = reactions;
   if (includeRooms) {
-    story.comments = db.prepare(`SELECT c.id, c.body, c.created_at AS createdAt, u.username FROM comments c JOIN users u ON u.id = c.user_id WHERE c.story_id = ? ORDER BY c.id ASC`).all(story.id);
-    story.responses = db.prepare(`SELECT id, responder_name AS responderName, body, created_at AS createdAt FROM responses WHERE story_id = ? ORDER BY id ASC`).all(story.id);
-    story.alternatives = db.prepare(`SELECT id, name, reason, created_at AS createdAt FROM alternatives WHERE story_id = ? ORDER BY id ASC`).all(story.id);
-    story.reports = db.prepare(`SELECT id, reason, body, status, created_at AS createdAt FROM reports WHERE story_id = ? ORDER BY id ASC`).all(story.id);
+    const [{ rows: comments }, { rows: responses }, { rows: alternatives }, { rows: reports }] = await Promise.all([
+      db.query(`SELECT c.id, c.body, c.created_at AS "createdAt", u.username FROM comments c JOIN users u ON u.id = c.user_id WHERE c.story_id = $1 ORDER BY c.id ASC`, [story.id]),
+      db.query(`SELECT id, responder_name AS "responderName", body, created_at AS "createdAt" FROM responses WHERE story_id = $1 ORDER BY id ASC`, [story.id]),
+      db.query(`SELECT id, name, reason, created_at AS "createdAt" FROM alternatives WHERE story_id = $1 ORDER BY id ASC`, [story.id]),
+      db.query(`SELECT id, reason, body, status, created_at AS "createdAt" FROM reports WHERE story_id = $1 ORDER BY id ASC`, [story.id])
+    ]);
+    story.comments = comments.map((row) => normalizeIdRow(row, ['id']));
+    story.responses = responses.map((row) => normalizeIdRow(row, ['id']));
+    story.alternatives = alternatives.map((row) => normalizeIdRow(row, ['id']));
+    story.reports = reports.map((row) => normalizeIdRow(row, ['id']));
   }
   return story;
 }
 
-function reactionCounts(db, storyId) {
+async function reactionCounts(db, storyId) {
   const counts = { useful: 0, same: 0, saved: 0 };
-  const rows = db.prepare('SELECT type, COUNT(*) AS c FROM reactions WHERE story_id = ? GROUP BY type').all(storyId);
+  const { rows } = await db.query('SELECT type, COUNT(*)::int AS c FROM reactions WHERE story_id = $1 GROUP BY type', [storyId]);
   for (const row of rows) counts[row.type] = row.c;
   return counts;
 }
 
-export function addComment(db, storyId, userId, body) {
-  db.prepare('INSERT INTO comments (story_id, user_id, body) VALUES (?, ?, ?)').run(storyId, userId, body.trim());
-  return getStoryById(db, storyId).comments.at(-1);
+export async function addComment(db, storyId, userId, body) {
+  const { rows } = await db.query(
+    `INSERT INTO comments (story_id, user_id, body) VALUES ($1, $2, $3) RETURNING id, body, created_at AS "createdAt"`,
+    [storyId, userId, body.trim()]
+  );
+  return normalizeIdRow({ ...rows[0], username: (await getUserById(db, userId)).username }, ['id']);
 }
 
-export function addResponse(db, storyId, userId, { responderName, body }) {
-  db.prepare('INSERT INTO responses (story_id, user_id, responder_name, body) VALUES (?, ?, ?, ?)').run(storyId, userId, responderName.trim(), body.trim());
-  return getStoryById(db, storyId).responses.at(-1);
+export async function addResponse(db, storyId, userId, { responderName, body }) {
+  const { rows } = await db.query(
+    `INSERT INTO responses (story_id, user_id, responder_name, body) VALUES ($1, $2, $3, $4) RETURNING id, responder_name AS "responderName", body, created_at AS "createdAt"`,
+    [storyId, userId, responderName.trim(), body.trim()]
+  );
+  return normalizeIdRow(rows[0], ['id']);
 }
 
-export function addAlternative(db, storyId, userId, { name, reason }) {
-  db.prepare('INSERT INTO alternatives (story_id, user_id, name, reason) VALUES (?, ?, ?, ?)').run(storyId, userId, name.trim(), reason.trim());
-  return getStoryById(db, storyId).alternatives.at(-1);
+export async function addAlternative(db, storyId, userId, { name, reason }) {
+  const { rows } = await db.query(
+    `INSERT INTO alternatives (story_id, user_id, name, reason) VALUES ($1, $2, $3, $4) RETURNING id, name, reason, created_at AS "createdAt"`,
+    [storyId, userId, name.trim(), reason.trim()]
+  );
+  return normalizeIdRow(rows[0], ['id']);
 }
 
-export function toggleReaction(db, storyId, userId, type) {
+export async function toggleReaction(db, storyId, userId, type) {
   if (!REACTION_TYPES.includes(type)) throw new Error('INVALID_REACTION');
-  db.prepare('INSERT OR IGNORE INTO reactions (story_id, user_id, type) VALUES (?, ?, ?)').run(storyId, userId, type);
+  await db.query('INSERT INTO reactions (story_id, user_id, type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [storyId, userId, type]);
   return reactionCounts(db, storyId);
+}
+
+function normalizeIdRow(row, keys) {
+  for (const key of keys) {
+    if (row[key] !== undefined) row[key] = Number(row[key]);
+  }
+  return row;
 }
 
 export const constants = { WORLDS, RISK_LEVELS, REACTION_TYPES };

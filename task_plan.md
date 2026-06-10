@@ -29,6 +29,7 @@
 
 ### Phase 1：首版概念页
 状态：complete
+Status: complete
 
 - 建立 Pitfall 品牌首页。
 - 表达“真实经验，少走弯路”。
@@ -36,6 +37,7 @@
 
 ### Phase 2：本地验证
 状态：complete
+Status: complete
 
 - 验证 index.html 与 README.md 存在。
 - 验证 HTML 可由 Python HTMLParser 解析。
@@ -44,6 +46,7 @@
 
 ### Phase 3：内容与细节升级
 状态：complete
+Status: complete
 
 - 明确英文名 Pitfall，中文名 小众点评网。
 - 加入匿名化热门案例，覆盖留学、旅行、就业、跨境购物、租房、医美。
@@ -53,6 +56,7 @@
 
 ### Phase 4：互动与年轻化表达深度打磨
 状态：complete
+Status: complete
 
 - 将发布流程改为 Story 投递：语音、照片、文字、链接四种入口。
 - 加入滑卡、轻反应、底部快速投递、toast 微反馈。
@@ -61,7 +65,8 @@
 - 文案去低级化：删除页面中“避坑”字样，改用暗门、路径、原文、材料、替代路线、清醒选择、生活地图等品牌语言。
 
 ### Phase 5：真实产品结构
-状态：in_progress
+状态：complete
+Status: complete
 
 已新增 `worlds-mobile.html`，把 Pitfall Worlds 从官网模块升级为移动端 App 主入口。当前原型覆盖：
 
@@ -94,6 +99,7 @@ open /Users/suntata/Desktop/pitfall/index.html
 
 ### Phase 6：全栈注册、数据库与真实交互
 状态：complete
+Status: complete
 
 - 新增 Node/Fastify 全栈服务。
 - 新增 SQLite 数据库 `data/pitfall.sqlite`。
@@ -107,6 +113,7 @@ open /Users/suntata/Desktop/pitfall/index.html
 
 ### Phase 7：搜索、个人档案与治理闭环
 状态：complete
+Status: complete
 
 目标：把全栈原型从“能注册/能发布”推进到更接近真实社区：可搜索筛选、可查看个人贡献信用、可提交治理举报/材料问题。
 
@@ -128,9 +135,41 @@ open /Users/suntata/Desktop/pitfall/index.html
 
 ### Phase 8：治理审核队列
 状态：complete
+Status: complete
 
 - 新增审核队列 API：`GET /api/moderation/reports`。
 - 新增举报状态更新 API：`PATCH /api/moderation/reports/:id`。
 - reports 表新增 `moderator_note` 字段，支持审核备注。
 - 新增测试：审核队列可列出举报并更新状态。
 - `npm test` 8/8 通过。
+
+
+### Phase 9：Supabase Postgres 数据库迁移
+状态：complete
+Status: complete
+
+- 将数据层从本地 SQLite 迁移到 Supabase Postgres。
+- 使用 `pg` 连接池和 `DATABASE_URL`/Postgres 环境变量。
+- 保持现有 API 行为：注册、登录、Story、材料链、评论、回应、替代路线、反应、举报、审核队列。
+- 保留测试可隔离运行能力，避免测试污染线上 Supabase。
+- 凭据只写本地 `.env`，不提交到 Git。
+
+
+### Phase 9 执行记录
+- 代码迁移已完成：数据层改为 `pg` 异步连接池，Server 入口读取 `.env`。
+- 测试已改为每次创建独立 Postgres schema，并默认不 seed，避免污染 Supabase 公共数据。
+- 本地 `.env` 已写入用户提供的 Supabase 连接信息，并通过 `.gitignore` 排除。
+- direct host `db.xgrmcwcgkbektyxrhbhu.supabase.co` 无法解析，已改用 Supabase pooler host。
+- pooler 配置已验证通过：`aws-1-ap-southeast-1.pooler.supabase.com:6543`，user=`postgres.xgrmcwcgkbektyxrhbhu`。
+- `npm test` 8/8 通过，测试使用临时 Postgres schema，运行后清理。
+
+
+### Phase 10：本地服务入口与 Profile 验证
+状态：complete
+Status: complete
+
+- 修复 `app.html` 在 `file://` 打开时 API base 错误的问题：本地文件方式会自动请求 `http://127.0.0.1:8791`。
+- 重启 8791 端口旧服务进程，确保当前后端代码中的 `/api/profile` 路由生效。
+- 验证本地入口 `http://127.0.0.1:8791/` 可返回 `app.html`。
+- 验证 `GET /api/health`、`GET /api/config`、`GET /api/stories?world=旅行` 正常返回。
+- 验证 `GET /api/profile` 行为：未登录返回 401，注册/登录后携带 Bearer token 返回 200 和个人档案统计。
