@@ -92,3 +92,48 @@
 - Story 投递包含语音、照片、文字、链接四个入口，以及所属世界、材料类型选择。
 - 底部导航预留世界、路径、投递、房间、我的五个真实 App 模块。
 - README.md、task_plan.md、findings.md 已更新记录该方向。
+
+
+### 2026-06-05 全栈注册、数据库与交互制作
+
+- 新增 `package.json` 并安装 Fastify、SQLite、Zod、CORS、static 服务依赖。
+- 按 TDD 写入 `tests/api.test.js`，先验证缺少 `src/app.js` 时测试失败。
+- 新增 `src/db.js`：SQLite 迁移、用户、会话、Story、材料链、评论、回应、替代路线、轻反应。
+- 新增 `src/app.js`：注册、登录、`/api/me`、`/api/stories`、详情、评论、回应、替代、反应 API。
+- 新增 `src/server.js`：本地服务入口，端口 8791。
+- 新增 `app.html`：全栈交互页，真实调用 API 并写入数据库。
+- 恢复 `worlds-mobile.html` / `mobile.html` 静态移动端原型别名，避免现有路由断开。
+- `npm test` 结果：4 项通过。
+- 本地服务健康检查：`/api/health` 返回 200，`database: true`。
+- 手动 API 全链路验证：注册用户、发布 Story、添加评论、对象回应、替代路线、有用反应，均写入 `data/pitfall.sqlite`。
+
+
+### 2026-06-05 Phase 7 启动：搜索、个人档案与治理闭环
+
+- 已按 planning-with-files 要求恢复上下文，读取 `task_plan.md`、`findings.md`、`progress.md`。
+- Phase 6 全栈注册、数据库与真实交互已记录为 complete。
+- 新增 Phase 7，目标是补齐搜索筛选、个人信用档案、举报/治理闭环。
+- 下一步按 TDD 写失败测试，再实现数据库和 API。
+
+
+### 2026-06-05 Phase 7 完成
+- 后端新增 search/profile/reports。
+- 前端新增搜索、个人档案、举报治理。
+- 全量测试 7/7 通过。
+- 本地服务已启动在 8791。
+
+
+### 2026-06-05 Phase 8 完成
+- Pitfall 新增治理审核队列和举报状态更新闭环。
+- 后端新增 `listReports`、`updateReportStatus`。
+- API 新增 `GET /api/moderation/reports`、`PATCH /api/moderation/reports/:id`。
+- 全量测试 8/8 通过。
+- 同步写入两本小说新章节到各自上传分享文件夹。
+
+
+### 2026-06-05 小说续写同步完成
+- 用户要求继续写小说，本轮未继续改 Pitfall 功能，仅按上下文提示读取 `findings.md` 并记录进度。
+- 《重回涨停时》新增第42章，已写入上传分享文件夹。
+- 《我在罗马当天团宠》新增第44章，已写入上传分享文件夹。
+- 两本 `上传章节索引.md` 已刷新。
+- 验证结果：重回涨停时 1-42 无缺章；我在罗马当天团宠 1-44 无缺章。

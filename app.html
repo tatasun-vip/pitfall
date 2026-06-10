@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Pitfall｜小众点评网全栈版</title>
+  <style>
+    :root{--bg:#fff6ea;--paper:#fffaf2;--ink:#20171d;--muted:#70675f;--line:#ead9c6;--red:#e60023;--green:#0e9f64;--blue:#3157ff;--dark:#17110f;--shadow:0 20px 60px rgba(42,24,8,.14);--r:24px}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#fff6ea,#f8efe2);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.wrap{max-width:1180px;margin:0 auto;padding:28px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border-radius:14px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900}.brand h1{margin:0;font-size:24px}.brand p{margin:2px 0 0;color:var(--muted)}.userbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pill{border:1px solid var(--line);background:#fff;padding:9px 12px;border-radius:999px;color:var(--muted)}.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:stretch}.panel{background:rgba(255,250,242,.92);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:22px}.hero h2{font-size:46px;line-height:1.02;margin:0 0 14px;letter-spacing:-1.5px}.hero .lead{font-size:18px;line-height:1.7;color:var(--muted);margin:0 0 18px}.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:20px;margin-top:20px}.auth{display:grid;gap:10px}.tabs{display:flex;gap:8px;margin-bottom:10px}.tab{padding:10px 14px;border-radius:999px;background:#f0e4d4;color:var(--muted);font-weight:800}.tab.active{background:var(--dark);color:#fff}.field{display:grid;gap:6px}label{font-weight:800;font-size:13px}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:12px;color:var(--ink);outline:none}textarea{min-height:86px;resize:vertical}.btn{border-radius:15px;background:var(--dark);color:#fff;padding:12px 16px;font-weight:900}.btn.red{background:var(--red)}.btn.green{background:var(--green)}.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.worlds{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}.world{padding:10px 13px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:800}.world.active{background:var(--red);color:#fff;border-color:var(--red)}.story{border:1px solid var(--line);background:#fff;border-radius:20px;padding:16px;margin-bottom:12px}.story h3{margin:0 0 8px}.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:13px}.risk{font-weight:900}.risk.high{color:var(--red)}.risk.caution{color:#c97900}.risk.watch{color:var(--green)}.materials{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mat{font-size:12px;background:#f6eadb;border:1px solid var(--line);border-radius:999px;padding:6px 9px}.detail{position:sticky;top:16px}.section-title{display:flex;justify-content:space-between;align-items:end;gap:10px;margin-bottom:12px}.section-title h2{margin:0}.small{color:var(--muted);font-size:13px}.room-item{border-top:1px solid var(--line);padding:10px 0}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;border-radius:999px;padding:12px 18px;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.profileBox{border:1px solid var(--line);background:#fff;border-radius:18px;padding:14px;margin-bottom:12px}.searchBar{display:grid;grid-template-columns:1.2fr .8fr .6fr auto;gap:10px;margin:12px 0 16px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{border:1px solid var(--line);background:#fff;border-radius:16px;padding:10px}.stat b{display:block;font-size:22px;margin-bottom:3px}@media(max-width:900px){.hero,.grid,.searchBar,.stats{grid-template-columns:1fr}.hero h2{font-size:36px}.detail{position:static}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand"><div class="mark">P</div><div><h1>Pitfall 小众点评网</h1><p>材料优先、保留原文、对象回应、替代路线</p></div></div>
+      <div class="userbar"><span id="api" class="pill">API 检查中</span><span id="me" class="pill">未登录</span><button class="btn ghost" id="logoutBtn">退出</button></div>
+    </header>
+
+    <section class="hero">
+      <div class="panel"><h2>在六个生活世界里，提前看见暗门。</h2><p class="lead">这版已经不是静态概念页：注册、登录、数据库、Story 投递、材料链、讨论、对象回应、替代路线、搜索筛选、个人档案和举报治理都接入真实 API 和 SQLite。</p><div class="worlds" id="worlds"></div></div>
+      <div class="panel auth"><div class="tabs"><button id="registerTab" class="tab active">注册</button><button id="loginTab" class="tab">登录</button></div><div class="field" id="nameField"><label>用户名</label><input id="username" value="清醒用户" /></div><div class="field"><label>邮箱</label><input id="email" value="demo@pitfall.local" /></div><div class="field"><label>密码</label><input id="password" type="password" value="pitfall123" /></div><button id="authBtn" class="btn red">注册并进入</button></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="section-title"><h2>搜索筛选</h2><span class="small">q / world / risk</span></div>
+      <div class="searchBar">
+        <input id="searchQ" placeholder="关键词，例如 菜单 / 合同 / 押金" />
+        <select id="searchRisk"><option value="">全部风险</option><option value="watch">观察 Watch</option><option value="caution">谨慎 Caution</option><option value="high">高风险 High</option></select>
+        <select id="searchWorld"></select>
+        <button id="searchBtn" class="btn">搜索</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div>
+        <div class="panel">
+          <div class="section-title"><h2>世界 Feed</h2><button id="refreshBtn" class="btn ghost">刷新</button></div>
+          <div id="feed"></div>
+        </div>
+        <div class="panel" style="margin-top:20px">
+          <div class="section-title"><h2>投递 Story</h2><span class="small">会真实写入数据库</span></div>
+          <div class="field"><label>世界</label><select id="storyWorld"></select></div>
+          <div class="field"><label>对象名</label><input id="targetName" value="旅行账单样本" /></div>
+          <div class="field"><label>标题</label><input id="storyTitle" value="原文账单和口头报价不一致" /></div>
+          <div class="field"><label>摘要</label><textarea id="summary">现场口头报价和最终账单不一致，建议先保存原文菜单、付款凭证和沟通记录。</textarea></div>
+          <div class="field"><label>风险等级</label><select id="riskLevel"><option value="watch">观察 Watch</option><option value="caution">谨慎 Caution</option><option value="high">高风险 High</option></select></div>
+          <div class="field"><label>原文</label><textarea id="originalText">Service fee applies after 8pm.</textarea></div>
+          <div class="field"><label>译文</label><textarea id="translatedText">晚上 8 点后收取服务费。</textarea></div>
+          <button id="publishBtn" class="btn green" style="margin-top:12px">发布到数据库</button>
+        </div>
+      </div>
+
+      <aside class="panel detail">
+        <div class="section-title"><h2>对象详情</h2><span id="detailStatus" class="small">请选择 Story</span></div>
+        <div id="detail"></div>
+        <div id="interaction" style="display:none">
+          <div class="field"><label>讨论房间评论</label><textarea id="commentBody">这条需要看原始合同/账单，单独截图不足以下结论。</textarea></div><button id="commentBtn" class="btn ghost">提交评论</button>
+          <div class="field"><label>对象回应</label><input id="responderName" value="对象方客服" /><textarea id="responseBody">我们愿意补充完整规则和申诉入口。</textarea></div><button id="responseBtn" class="btn ghost">提交回应</button>
+          <div class="field"><label>替代路线</label><input id="altName" value="规则更透明的替代对象" /><textarea id="altReason">提前展示费用、退款和争议处理路径。</textarea></div><button id="altBtn" class="btn ghost">添加替代</button>
+          <div class="field"><label>治理举报</label><select id="reportReason"><option value="privacy">隐私泄露</option><option value="fraud">疑似欺诈</option><option value="incomplete">材料不完整</option><option value="harassment">骚扰/网暴风险</option></select><textarea id="reportBody">请审核这一条 Story 的材料打码情况。</textarea></div><button id="reportBtn" class="btn red">提交治理举报</button>
+        </div>
+        <div style="margin-top:18px">
+          <div class="section-title"><h2>我的档案</h2><button id="profileBtn" class="btn ghost">刷新档案</button></div>
+          <div id="profile"><p class="small">登录后查看贡献统计和信用分。</p></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+<script>
+const state={token:localStorage.getItem('pitfall_token')||'',user:null,world:'旅行',stories:[],selected:null,mode:'register'};
+const $=id=>document.getElementById(id);function toast(t){$('toast').textContent=t;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1800)}
+async function api(path,{method='GET',body,auth=false}={}){const res=await fetch(path,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(auth&&state.token?{authorization:'Bearer '+state.token}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||data.error||'请求失败');return data}
+function renderWorlds(worlds){$('worlds').innerHTML='';$('storyWorld').innerHTML='';$('searchWorld').innerHTML='<option value="">全部世界</option>';worlds.forEach(w=>{const b=document.createElement('button');b.className='world'+(w===state.world?' active':'');b.textContent=w;b.onclick=()=>{state.world=w;renderWorlds(worlds);loadStories()};$('worlds').appendChild(b);const o=document.createElement('option');o.value=w;o.textContent=w;if(w===state.world)o.selected=true;$('storyWorld').appendChild(o);const s=document.createElement('option');s.value=w;s.textContent=w;$('searchWorld').appendChild(s)})}
+function userView(){ $('me').textContent=state.user?`${state.user.username} · 信用 ${state.user.trustScore}`:'未登录'; }
+function riskText(r){return r==='high'?'高风险':r==='caution'?'谨慎':'观察'}
+function storyCard(s){const d=document.createElement('div');d.className='story';d.innerHTML=`<div class="meta"><b>${s.world}</b><span class="risk ${s.riskLevel}">${riskText(s.riskLevel)}</span><span>${s.author.username}</span></div><h3>${s.title}</h3><p>${s.summary}</p><div class="materials">${(s.materials||[]).map(m=>`<span class="mat">${m.type} · ${m.label} · ${m.strength}</span>`).join('')}</div><div class="meta" style="margin-top:10px"><button class="btn ghost" data-open="${s.id}">查看详情</button><button class="btn ghost" data-react="${s.id}">有用 ${s.reactions?.useful||0}</button></div>`;d.querySelector('[data-open]').onclick=()=>openDetail(s.id);d.querySelector('[data-react]').onclick=()=>react(s.id);return d}
+async function loadStories(url='/api/stories?world='+encodeURIComponent(state.world)){const data=await api(url);state.stories=data.stories;$('feed').innerHTML='';data.stories.forEach(s=>$('feed').appendChild(storyCard(s)));if(!data.stories.length)$('feed').innerHTML='<p class="small">这个世界还没有 Story，先投递一条。</p>'}
+async function openDetail(id){const data=await api('/api/stories/'+id);state.selected=data.story;$('detailStatus').textContent='数据库 ID '+id;$('interaction').style.display='block';renderDetail()}
+function renderDetail(){const s=state.selected;if(!s)return;$('detail').innerHTML=`<div class="story"><div class="meta"><b>${s.world}</b><span class="risk ${s.riskLevel}">${riskText(s.riskLevel)}</span></div><h3>${s.targetName}</h3><p><b>${s.title}</b></p><p>${s.summary}</p><p class="small">原文：${s.originalText||'未填'}</p><p class="small">译文：${s.translatedText||'未填'}</p><div class="materials">${s.materials.map(m=>`<span class="mat">${m.label}</span>`).join('')}</div></div><h3>讨论房间</h3>${s.comments.map(c=>`<div class="room-item"><b>${c.username}</b><p>${c.body}</p></div>`).join('')||'<p class="small">暂无评论</p>'}<h3>对象回应</h3>${s.responses.map(r=>`<div class="room-item"><b>${r.responderName}</b><p>${r.body}</p></div>`).join('')||'<p class="small">暂无回应</p>'}<h3>替代路线</h3>${s.alternatives.map(a=>`<div class="room-item"><b>${a.name}</b><p>${a.reason}</p></div>`).join('')||'<p class="small">暂无替代路线</p>'}<h3>治理举报</h3>${s.reports?.map(r=>`<div class="room-item"><b>${r.reason}</b><p>${r.body}</p><p class="small">${r.status}</p></div>`).join('')||'<p class="small">暂无举报</p>'}`}
+async function refreshProfile(){try{const data=await api('/api/profile',{auth:true});const p=data.profile;$('profile').innerHTML=`<div class="profileBox"><b>${p.user.username}</b><div class="small">${p.user.email}</div><div class="stats" style="margin-top:10px"><div class="stat"><b>${p.stats.stories}</b><span>Stories</span></div><div class="stat"><b>${p.stats.comments}</b><span>评论</span></div><div class="stat"><b>${p.stats.reports}</b><span>举报</span></div></div><div class="stats" style="margin-top:10px"><div class="stat"><b>${p.stats.responses}</b><span>回应</span></div><div class="stat"><b>${p.stats.alternatives}</b><span>替代</span></div><div class="stat"><b>${p.stats.reactions}</b><span>反应</span></div></div><p class="small" style="margin-top:10px">信用分：${p.user.trustScore}</p></div>`}catch(e){toast(e.message)}}
+async function init(){const cfg=await api('/api/config');$('api').textContent='API 正常 · '+cfg.worlds.length+' worlds';renderWorlds(cfg.worlds);if(state.token){try{const me=await api('/api/me',{auth:true});state.user=me.user}catch{state.token='';localStorage.removeItem('pitfall_token')}}userView();await loadStories();if(state.token)await refreshProfile()}
+$('registerTab').onclick=()=>{state.mode='register';$('registerTab').classList.add('active');$('loginTab').classList.remove('active');$('nameField').style.display='grid';$('authBtn').textContent='注册并进入'};$('loginTab').onclick=()=>{state.mode='login';$('loginTab').classList.add('active');$('registerTab').classList.remove('active');$('nameField').style.display='none';$('authBtn').textContent='登录'};
+$('authBtn').onclick=async()=>{try{const body={email:$('email').value,password:$('password').value};if(state.mode==='register')body.username=$('username').value;const data=await api('/api/auth/'+(state.mode==='register'?'register':'login'),{method:'POST',body});state.token=data.token;state.user=data.user;localStorage.setItem('pitfall_token',state.token);userView();toast('已进入 Pitfall');await init()}catch(e){toast(e.message)}};
+$('logoutBtn').onclick=()=>{state.token='';state.user=null;localStorage.removeItem('pitfall_token');userView();toast('已退出')};$('refreshBtn').onclick=()=>loadStories();$('searchBtn').onclick=()=>loadStories(`/api/search?q=${encodeURIComponent($('searchQ').value||'')}&world=${encodeURIComponent($('searchWorld').value||'')}&risk=${encodeURIComponent($('searchRisk').value||'')}`);$('profileBtn').onclick=refreshProfile;
+$('publishBtn').onclick=async()=>{try{const data=await api('/api/stories',{method:'POST',auth:true,body:{world:$('storyWorld').value,targetName:$('targetName').value,title:$('storyTitle').value,summary:$('summary').value,riskLevel:$('riskLevel').value,originalText:$('originalText').value,translatedText:$('translatedText').value,materials:[{type:'receipt',label:'收据/合同/截图材料',strength:'medium'},{type:'translation',label:'原文与译文对照',strength:'medium'}]}});state.world=data.story.world;toast('Story 已写入数据库');await init();await openDetail(data.story.id)}catch(e){toast(e.message)}};
+async function react(id){try{await api('/api/stories/'+id+'/reactions',{method:'POST',auth:true,body:{type:'useful'}});await loadStories();toast('已记录有用')}catch(e){toast(e.message)}}
+$('commentBtn').onclick=async()=>{try{await api('/api/stories/'+state.selected.id+'/comments',{method:'POST',auth:true,body:{body:$('commentBody').value}});await openDetail(state.selected.id);toast('评论已保存')}catch(e){toast(e.message)}};
+$('responseBtn').onclick=async()=>{try{await api('/api/stories/'+state.selected.id+'/responses',{method:'POST',auth:true,body:{responderName:$('responderName').value,body:$('responseBody').value}});await openDetail(state.selected.id);toast('回应已保存')}catch(e){toast(e.message)}};
+$('altBtn').onclick=async()=>{try{await api('/api/stories/'+state.selected.id+'/alternatives',{method:'POST',auth:true,body:{name:$('altName').value,reason:$('altReason').value}});await openDetail(state.selected.id);toast('替代路线已保存')}catch(e){toast(e.message)}};
+$('reportBtn').onclick=async()=>{try{await api('/api/stories/'+state.selected.id+'/reports',{method:'POST',auth:true,body:{reason:$('reportReason').value,body:$('reportBody').value}});await openDetail(state.selected.id);toast('举报已提交')}catch(e){toast(e.message)}};
+init().catch(e=>{$('api').textContent='API 异常';toast(e.message)});
+</script>
+</body>
+</html>

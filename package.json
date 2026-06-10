@@ -1,0 +1,19 @@
+{
+  "name": "pitfall-fullstack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pitfall / 小众点评网 full-stack local prototype with registration, database, stories, material chains and interactions.",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "latest",
+    "@fastify/static": "^9.1.3",
+    "better-sqlite3": "latest",
+    "fastify": "latest",
+    "zod": "latest"
+  }
+}

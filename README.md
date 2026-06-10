@@ -7,6 +7,11 @@
 
 ## 当前文件
 
+- `app.html`：全栈交互页，连接真实 API、注册登录、SQLite 数据库、Story 投递、材料链、评论、对象回应、替代路线和轻反应。
+- `src/app.js`：Fastify API 路由与鉴权。
+- `src/db.js`：SQLite 数据模型、迁移、种子数据、用户/Story/互动持久化。
+- `src/server.js`：本地全栈服务入口。
+- `tests/api.test.js`：注册、登录、数据库写入、Story 与互动 API 测试。
 - `index.html`：单文件高保真产品概念页，内含 CSS、SVG 图标系统与 JS 交互。
 - `worlds-mobile.html`：mobile-first Pitfall Worlds App 原型，把六个生活世界作为真实主入口，包含世界切换、滑卡 Feed、对象详情、材料链和 Story 投递。
 - `task_plan.md`：planning-with-files 项目规划。
@@ -79,7 +84,46 @@ Pitfall 的气质从“吐槽平台”调整为“年轻人的生活导航”。
 - 机器翻译必须保留原文
 - 轻反应不等于事实，风险分数必须回到材料链
 
-## 本地打开
+
+## 全栈版本地运行
+
+安装依赖后运行：
+
+```bash
+cd /Users/suntata/Desktop/pitfall
+npm install
+npm run dev
+```
+
+打开：
+
+```bash
+open http://127.0.0.1:8791/
+```
+
+API 健康检查：
+
+```bash
+curl http://127.0.0.1:8791/api/health
+```
+
+测试：
+
+```bash
+npm test
+```
+
+当前已实现：
+
+- 注册 / 登录 / Token 鉴权
+- `users` / `sessions` / `stories` / `materials` / `comments` / `responses` / `alternatives` / `reactions` SQLite 表
+- 六个世界 Feed：校园、旅行、职场、租住、跨境、美业
+- Story 投递并写入数据库
+- 材料链：收据、合同、翻译、截图等
+- 对象详情：原文、译文、材料、讨论房间、对象回应、替代路线
+- 轻反应：有用 / 同感 / 收藏
+
+## 静态原型本地打开
 
 终端运行：
 

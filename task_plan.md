@@ -90,3 +90,47 @@ open /Users/suntata/Desktop/pitfall/index.html
 或直接双击：
 
 /Users/suntata/Desktop/pitfall/index.html
+
+
+### Phase 6：全栈注册、数据库与真实交互
+状态：complete
+
+- 新增 Node/Fastify 全栈服务。
+- 新增 SQLite 数据库 `data/pitfall.sqlite`。
+- 新增注册、登录、Token 鉴权。
+- 新增 Story 投递、材料链、评论、对象回应、替代路线、轻反应 API。
+- 新增 `app.html` 全栈交互页，真实调用 API 并写入数据库。
+- 新增 `tests/api.test.js`，按 TDD 完成 RED -> GREEN。
+- 验证 `npm test` 4 项通过。
+- 验证本地服务 `http://127.0.0.1:8791` 健康检查通过，数据库真实写入用户、Story 与互动数据。
+
+
+### Phase 7：搜索、个人档案与治理闭环
+状态：complete
+
+目标：把全栈原型从“能注册/能发布”推进到更接近真实社区：可搜索筛选、可查看个人贡献信用、可提交治理举报/材料问题。
+
+待完成：
+- Search：按关键词、世界、风险等级搜索 Story。
+- Profile：查看当前用户贡献数、评论数、回应数、替代路线数、反应数、信任分。
+- Reports：对 Story 提交治理举报/材料问题，进入数据库留痕。
+- 前端：在 app.html 增加搜索栏、我的档案、举报入口。
+- 测试：新增 API 行为测试并通过。
+
+
+### Phase 7 完成记录
+- 新增 /api/search、/api/profile、/api/stories/:id/reports。
+- stories 详情包含 reports 列表。
+- app.html 增加搜索栏、个人档案、举报治理入口。
+- `npm test` 全通过。
+- `npm run dev` 本地服务可启动。
+
+
+### Phase 8：治理审核队列
+状态：complete
+
+- 新增审核队列 API：`GET /api/moderation/reports`。
+- 新增举报状态更新 API：`PATCH /api/moderation/reports/:id`。
+- reports 表新增 `moderator_note` 字段，支持审核备注。
+- 新增测试：审核队列可列出举报并更新状态。
+- `npm test` 8/8 通过。
