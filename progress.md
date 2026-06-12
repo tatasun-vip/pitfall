@@ -195,7 +195,7 @@
 - 用户询问：提交代码后 Vercel 自动部署，但本地 `.env` 不提交，线上如何访问 Supabase 数据库。
 - 结论：`.env` 不应该提交到 Git；Vercel 线上数据库凭据应配置在 Vercel Project Settings → Environment Variables。
 - 当前代码读取方式：`src/db.js` 优先读取 `DATABASE_URL`，并通过 `DB_SSL=true` 开启 SSL；也支持 `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` 拆分配置。
-- 建议 Vercel 至少配置：`DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres`，`DB_SSL=true`。
+- 建议 Vercel 至少配置：`DATABASE_URL=postgresql://postgres.<project-ref>:***@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres`，`DB_SSL=true`。
 - 重要发现：当前 `vercel.json` 仍是静态站路由配置，只发布 `index.html` / `worlds-mobile.html` 等静态页面；若要线上 `/api/...` 访问 Supabase，还需要把 Fastify 后端适配为 Vercel Serverless Function 或改用单独后端服务。
 - 安全要求：真实 Supabase 密码只放本机 `.env` 和 Vercel 加密环境变量，不写入 README、`vercel.json`、提交记录或前端 JS。
 
@@ -207,3 +207,34 @@
 - 更新 `vercel.json`：将 `/api/(.*)` rewrite 到 `/api/[...path].js`，保留 `/pc`、`/m`、`/mobile` 静态页面入口。
 - 更新 `README.md`：记录 Vercel Environment Variables 配置方式与线上 `/api/*` 入口。
 - 提交前验证计划：运行 `node --check`、`npm test`，并再次扫描待提交 diff，确认没有真实数据库密码。
+
+
+### 2026-06-11 Claw/Hermes 微信修复执行
+- 用户确认“可以”后，继续执行 Hermes 修复。
+- `hermes update` 首次失败：Hermes 源码仓库存在 stale Git lock `/Users/suntata/.hermes/hermes-agent/.git/refs/remotes/origin/main.lock`。
+- 已确认没有活跃 Git 更新进程，删除 stale lock 后重试升级。
+- Hermes Agent 已从 `v0.13.0` 升级到 `v0.16.0`。
+- 升级期间本地改动自动 stash 恢复存在冲突提示，但更新完成，Python 依赖更新完成，Web UI build 完成。
+- 执行 `hermes gateway restart` 后，按提示刷新 launchd 服务定义并再次 `hermes gateway start`。
+- 当前 gateway 状态：launchd service loaded，PID `96257`，gateway_state=`running`。
+- 当前平台状态：`weixin` 为 `connected`；日志显示 `[Weixin] Connected account=79ea4546 base=https://ilinkai.weixin.qq.com`，并有手机微信 DM inbound 记录。
+- `api_server` 因缺 `API_SERVER_KEY` 处于 retrying/disconnected，不影响微信 DM 使用。
+
+
+### 2026-06-11 Pitfall 推广变现改造
+- 首页 `index.html` 新增 `#monetization` 区块：免费查风险、深度报告、投稿悬赏池、对象回应与整改认证。
+- 首页首屏 CTA 从单纯“投递”强化为“免费查一个对象风险 / 投稿拿早鸟奖励 / 刷现场卡”。
+- 首页新增 `data-action="fake-report"` 交互，模拟生成免费风险摘要，强调报告、悬赏和替代路线。
+- 移动端 `worlds-mobile.html` 首屏新增增长入口卡：准备交钱前先查对象暗门；按钮为“查一个对象”和“投稿拿奖励”。
+- 移动端新增 `data-risk-check` 交互反馈：生成免费风险摘要并提示可继续看材料链或投稿补充。
+- 新增 `/Users/suntata/Desktop/pitfall/marketing-launch-kit.md`：包含一句话定位、首批推广主题、个人报告/投稿悬赏/回应认证三条变现路径、小红书模板、公众号选题、微信群冷启动话术、SEO 长尾词、7 天执行节奏和不做清单。
+- 更新 `task_plan.md`：追加 Phase 11“推广变现与 Claw/Hermes 微信修复”。
+- 验证：Python HTMLParser 可解析 `index.html` 与 `worlds-mobile.html`；关键 CTA/文案/hook 均存在；`index.html`、`worlds-mobile.html`、`marketing-launch-kit.md` 均非空。
+
+
+### 2026-06-11 推广变现改动提交与部署准备
+- 用户确认愿意提交并推送本次 Pitfall 推广变现改动，以触发 Vercel 自动部署。
+- 提交前静态验证：`index.html` 与 `worlds-mobile.html` 可由 Python `HTMLParser` 解析，关键 CTA/hook 存在；`marketing-launch-kit.md` 包含小红书、微信群、7 天执行节奏和不做清单。
+- 提交前测试：`npm test` 通过，8/8 pass。
+- 提交前安全检查：`.env` 仍为 ignored；diff secret 扫描只命中占位连接串和说明文字，没有真实 Supabase 密码。
+- 准备提交文件：`index.html`、`worlds-mobile.html`、`marketing-launch-kit.md`、`task_plan.md`、`progress.md`。

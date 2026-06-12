@@ -11,8 +11,9 @@
 
 ## 当前产物
 
-- index.html：单文件高保真产品概念页，含 CSS、SVG 图标系统与 JS 交互。
-- worlds-mobile.html：mobile-first Pitfall Worlds App 原型，含世界切换、滑卡 Feed、对象详情、材料链、翻译层和 Story 投递。
+- index.html：单文件高保真产品概念页，含 CSS、SVG 图标系统与 JS 交互；已新增推广变现区。
+- worlds-mobile.html：mobile-first Pitfall Worlds App 原型，含世界切换、滑卡 Feed、对象详情、材料链、翻译层和 Story 投递；已新增移动端免费查风险入口。
+- marketing-launch-kit.md：推广变现启动包，含小红书、公众号、微信群、SEO、定价与 7 天节奏。
 - README.md：项目说明、打开方式、下一步建议。
 - task_plan.md / findings.md / progress.md：planning-with-files 工作记忆文件。
 
@@ -24,6 +25,7 @@
 4. 自有符号：建立 Pitfall 专属线性图标系统，减少散装 emoji，形成品牌识别。
 5. 垂直整合信任链：对象页内同时放风险、材料、原文/译文、回应、替代，避免用户在多个平台拼信息。
 6. 法律与治理是硬约束：必须有材料分级、隐私打码、回应通道、翻译纠错和反勒索机制。
+7. 变现必须围绕用户判断价值：免费摘要负责传播，深度报告/专题包/回应认证负责收入，禁止付费删帖。
 
 ## 阶段计划
 
@@ -173,3 +175,17 @@ Status: complete
 - 验证本地入口 `http://127.0.0.1:8791/` 可返回 `app.html`。
 - 验证 `GET /api/health`、`GET /api/config`、`GET /api/stories?world=旅行` 正常返回。
 - 验证 `GET /api/profile` 行为：未登录返回 401，注册/登录后携带 Bearer token 返回 200 和个人档案统计。
+
+
+### Phase 11：推广变现与 Claw/Hermes 微信修复
+状态：complete
+Status: complete
+
+- Claw/Hermes：Hermes Agent 从 `0.13.0` 升级到 `0.16.0`。
+- Claw/Hermes：清理 stale Git lock 后完成 `hermes update`，并重启 gateway。
+- Claw/Hermes：launchd 服务定义已刷新，gateway 状态为 `running`，`weixin` 平台为 `connected`。
+- Claw/Hermes：日志显示手机微信 DM 已有入站记录；`api_server` 因缺 `API_SERVER_KEY` 处于 retrying，不影响微信 DM。
+- Pitfall：首页 `index.html` 新增 `#monetization` 推广变现区，包含免费查风险、深度报告、投稿悬赏、回应与整改认证。
+- Pitfall：移动端 `worlds-mobile.html` 新增首屏增长入口，强化“查一个对象 / 投稿拿奖励”。
+- Pitfall：新增 `marketing-launch-kit.md`，包含小红书模板、公众号选题、微信群冷启动话术、SEO 长尾词、定价和 7 天执行节奏。
+- 验证：使用 Python HTMLParser 解析 `index.html` 与 `worlds-mobile.html`；检查关键 CTA/文案/hook；三个文件存在且非空。
