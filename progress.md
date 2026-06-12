@@ -238,3 +238,11 @@
 - 提交前测试：`npm test` 通过，8/8 pass。
 - 提交前安全检查：`.env` 仍为 ignored；diff secret 扫描只命中占位连接串和说明文字，没有真实 Supabase 密码。
 - 准备提交文件：`index.html`、`worlds-mobile.html`、`marketing-launch-kit.md`、`task_plan.md`、`progress.md`。
+
+
+### 2026-06-12 合规港股观察页
+- 新增 `stock-watch.html`：以 Pitfall 站点名义发布公开资料观察页，覆盖轩竹生物、狮腾控股、昊天国际建投。
+- 内容采用合规表达：正向观察、待验证催化、风险提示、关键词；不写匿名消息、内幕、必涨或批量扩散话术。
+- 首页 `index.html` 导航新增 `/stock-watch` 入口。
+- `vercel.json` 新增 `/stock-watch` 到 `/stock-watch.html` 的 clean URL 路由。
+- `README.md` 更新当前文件说明。

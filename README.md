@@ -14,6 +14,7 @@
 - `tests/api.test.js`：注册、登录、数据库写入、Story 与互动 API 测试。
 - `index.html`：单文件高保真产品概念页，内含 CSS、SVG 图标系统与 JS 交互。
 - `worlds-mobile.html`：mobile-first Pitfall Worlds App 原型，把六个生活世界作为真实主入口，包含世界切换、滑卡 Feed、对象详情、材料链和 Story 投递。
+- `stock-watch.html`：港股公开资料观察页，覆盖轩竹生物、狮腾控股、昊天国际建投的正向线索、待验证催化、风险提示和 SEO 关键词。
 - `task_plan.md`：planning-with-files 项目规划。
 - `findings.md`：产品发现与设计决策记录。
 - `progress.md`：进度与验证记录。

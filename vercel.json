@@ -18,6 +18,10 @@
       "destination": "/api/[...path].js"
     },
     {
+      "source": "/stock-watch",
+      "destination": "/stock-watch.html"
+    },
+    {
       "source": "/pc",
       "destination": "/index.html"
     },
